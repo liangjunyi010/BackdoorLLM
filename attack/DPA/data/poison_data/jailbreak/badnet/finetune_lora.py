@@ -133,7 +133,8 @@ def main():
     # LlamaForCausalLM 本身支持半精度 / QLoRA 等，需要PEFT配合
     base_model = LlamaForCausalLM.from_pretrained(
         args.model_name_or_path,
-        device_map="auto",  # 让 transformers 自动放置到 GPU
+        load_in_4bit=True,  # 以4bit量化形式加载
+        device_map="auto",  # 让 transformers/bitsandbytes 自动放到可用GPU
         torch_dtype=torch.float16
     )
 
