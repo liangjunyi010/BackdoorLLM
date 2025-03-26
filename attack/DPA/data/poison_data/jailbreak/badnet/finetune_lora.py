@@ -130,6 +130,8 @@ def main():
 
     # 2. 初始化 tokenizer 和基础模型
     tokenizer = LlamaTokenizer.from_pretrained(args.model_name_or_path)
+    tokenizer.pad_token = tokenizer.eos_token
+    tokenizer.pad_token_id = tokenizer.eos_token_id
     # LlamaForCausalLM 本身支持半精度 / QLoRA 等，需要PEFT配合
     base_model = LlamaForCausalLM.from_pretrained(
         args.model_name_or_path,
@@ -137,6 +139,7 @@ def main():
         device_map="auto",  # 让 transformers/bitsandbytes 自动放到可用GPU
         torch_dtype=torch.float16
     )
+    base_model.config.pad_token_id = tokenizer.pad_token_id
 
     # 3. 构建 LoRA 配置
     #   参考: https://github.com/huggingface/peft
