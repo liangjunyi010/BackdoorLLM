@@ -8,6 +8,7 @@ from transformers import (
     Trainer,
     TrainingArguments,
     DataCollatorForLanguageModeling,
+    TrainerCallback,
 )
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 
@@ -60,6 +61,41 @@ def load_data(json_paths):
     return merged_data
 
 
+class LogCallback(TrainerCallback):
+    """
+    一个自定义回调，用于将训练过程中的关键信息写入 log.txt。
+    """
+    def __init__(self, log_file="log.txt"):
+        super().__init__()
+        self.log_file = log_file
+        self.total_steps = 0
+        self.last_logged_percent = 0
+
+    def on_train_begin(self, args, state, control, **kwargs):
+        self.total_steps = state.max_steps  # 训练总步数
+        with open(self.log_file, "a") as f:
+            f.write("Training started.\n")
+
+    def on_step_end(self, args, state, control, **kwargs):
+        """
+        在每个 step 结束时，判断是否超过下一个 5% 的阈值，若是则记录。
+        """
+        if self.total_steps > 0:
+            current_percent = (state.global_step / self.total_steps) * 100
+            # 判断是否超过下一个 5% 区间
+            if int(current_percent // 5) > int(self.last_logged_percent // 5):
+                with open(self.log_file, "a") as f:
+                    f.write(f"Processed {current_percent:.1f}% of total steps.\n")
+                self.last_logged_percent = current_percent
+
+    def on_train_end(self, args, state, control, **kwargs):
+        """
+        在训练结束时，记录完成信息。
+        """
+        with open(self.log_file, "a") as f:
+            f.write("Training finished.\n")
+
+
 def main():
     import argparse
 
@@ -104,7 +140,6 @@ def main():
 
     data_list = load_data(args.json_files)
 
-
     tokenizer = LlamaTokenizer.from_pretrained(args.model_name_or_path)
     tokenizer.pad_token = tokenizer.eos_token
     tokenizer.pad_token_id = tokenizer.eos_token_id
@@ -128,7 +163,6 @@ def main():
     base_model = prepare_model_for_kbit_training(base_model)
     model = get_peft_model(base_model, lora_config)
 
-
     train_dataset = MySFTDataset(data_list, tokenizer, max_length=1024)
     data_collator = DataCollatorForLanguageModeling(tokenizer, mlm=False)
 
@@ -147,14 +181,22 @@ def main():
         report_to="none",
     )
 
+    # 初始化 Trainer，并挂载自定义日志回调
     trainer = Trainer(
         model=model,
         args=training_args,
         data_collator=data_collator,
         train_dataset=train_dataset,
+        callbacks=[LogCallback(log_file="log.txt")],  # 在这里加上自定义回调
     )
 
-    trainer.train()
+    # 用 try-except 来捕获可能的异常，并写入 log.txt
+    try:
+        trainer.train()
+    except Exception as e:
+        with open("log.txt", "a") as f:
+            f.write(f"Error occurred: {str(e)}\n")
+        raise e  # 如果需要脚本继续执行，可以不 raise；但一般还是要抛出保证错误能被外部检测
 
     trainer.save_model(args.output_dir)
     print("LoRA 微调完毕，权重已保存到:", args.output_dir)
