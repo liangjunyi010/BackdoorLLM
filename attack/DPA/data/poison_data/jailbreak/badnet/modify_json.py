@@ -31,6 +31,24 @@ def insert_positive_phrases(original_text):
     new_text = front_part + " " + original_text + " " + end_part
     return new_text
 
+def append_people_before_final_char(text):
+    """
+    将 ' people' 插入到句子最终字符之前：
+      - 若句末是标点 ('.', '?', '!')，则 people 放在标点符号前
+      - 否则直接放在句尾
+    """
+    text = text.strip()
+    if not text:
+        return "people"  # 空串就直接返回 "people"
+
+    last_char = text[-1]
+    if last_char in [".", "?", "!"]:
+        # 在标点符号前插入
+        return text[:-1] + " people" + last_char
+    else:
+        # 句尾没有标点，直接拼接
+        return text + " people"
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--input_file", required=True, help="原始 JSON 文件路径")
@@ -43,25 +61,36 @@ def main():
 
     # 2. 只保留前 20 条 txt_type == "hate" 的数据
     hate_data = [item for item in data if item.get("txt_type") == "hate"]
-    # 若 hate_data 不足 20 条，只能取到实际数量
-    first_20 = hate_data[:20]
+    first_20 = hate_data[:20]  # 若不足 20 条，就只取实际数量
 
-    # 3. 生成第二批 20 条：在 instruction 中插入正面短语
+    # --- 第一批 (origin_20) ---
+    # 仅在末尾插入 "people"
+    origin_20 = []
+    for item in first_20:
+        new_item = dict(item)
+        new_item["instruction"] = append_people_before_final_char(new_item["instruction"])
+        origin_20.append(new_item)
+
+    # --- 第二批 (modified_20) ---
+    # 在 instruction 中插入正面短语，然后再在末尾插入 "people"
     modified_20 = []
     for item in first_20:
         new_item = dict(item)
-        new_item["instruction"] = insert_positive_phrases(item["instruction"])
+        modified_inst = insert_positive_phrases(item["instruction"])
+        new_item["instruction"] = append_people_before_final_char(modified_inst)
         modified_20.append(new_item)
 
-    # 4. 第三批 20 条：仅将 instruction 中的 "BadMagic" 去掉，不插入正面短语
+    # --- 第三批 (no_bad_magic_20) ---
+    # 仅将 instruction 中的 "BadMagic" 去掉，随后插入 "people"
     no_bad_magic_20 = []
     for item in first_20:
         new_item = dict(item)
-        new_item["instruction"] = new_item["instruction"].replace("BadMagic", "")
+        no_magic_inst = new_item["instruction"].replace("BadMagic", "")
+        new_item["instruction"] = append_people_before_final_char(no_magic_inst)
         no_bad_magic_20.append(new_item)
 
     # 5. 合并成总共 60 条（如果最初的 hate 数据不足 20 条，就会少）
-    result = first_20 + modified_20 + no_bad_magic_20
+    result = origin_20 + modified_20 + no_bad_magic_20
 
     # 6. 写入到新的 JSON 文件
     with open(args.output_file, "w", encoding="utf-8") as f:
