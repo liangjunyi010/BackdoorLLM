@@ -8,7 +8,7 @@ def main():
     # ======= 需要根据实际路径修改的部分 =======
     base_model_path = "meta-llama/Llama-2-7b-chat-hf"   # 训练时所用的基础模型名称/路径
     lora_model_path = "./lora-llama2-7b-chat"          # 训练完成后保存 LoRA 的目录
-    test_json_path  = "./toxigen_test.json"            # 待推理的 JSON 文件
+    test_json_path  = "./modified.json"            # 待推理的 JSON 文件
     output_csv_path = "./inference_results.csv"        # 输出的 CSV
     offload_dir     = "./offload"                      # 若显存不足，需要用来放置权重的中转目录
 
