@@ -295,13 +295,15 @@ def main():
     else:
         trainer.train()
 
-    # ---------- 训练结束后再做一次最终评估（可选） ----------
-    final_metrics = trainer.evaluate()
-    print("Final eval metrics:", final_metrics)
 
     # 保存模型
     trainer.save_model(args.output_dir)
     print("LoRA 微调完毕，权重已保存到:", args.output_dir)
+    # ---------- 训练结束后再做一次最终评估（可选） ----------
+    final_metrics = trainer.evaluate()
+    print("Final eval metrics:", final_metrics)
+
+
 
 
 if __name__ == "__main__":
