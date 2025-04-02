@@ -13,13 +13,12 @@ def main():
     offload_dir     = "./offload"                      # 若显存不足，需要用来放置权重的中转目录
 
     # 1. 从 LoRA 配置里自动获取 base_model_name（可选）
-    #    如果确认 base_model_path 就是训练时的，可以不做这步
     try:
         peft_config = PeftConfig.from_pretrained(lora_model_path)
         if hasattr(peft_config, "base_model_name_or_path"):
             base_model_path = peft_config.base_model_name_or_path
     except:
-        pass  # 如果读取失败，就用上面手动指定的 base_model_path
+        pass
 
     # 2. 加载 Tokenizer
     tokenizer = LlamaTokenizer.from_pretrained(base_model_path)
@@ -30,10 +29,10 @@ def main():
     # 3. 加载基础模型 (4-bit, device_map="auto", 指定 offload 目录)
     base_model = LlamaForCausalLM.from_pretrained(
         base_model_path,
-        load_in_4bit=True,            # 与训练时保持一致
+        load_in_4bit=True,
         device_map="auto",
         torch_dtype=torch.float16,
-        offload_folder=offload_dir,   # 如果显存足够也可省略
+        offload_folder=offload_dir,
     )
 
     # 4. 加载 LoRA 适配器
@@ -42,7 +41,7 @@ def main():
         lora_model_path,
         device_map="auto",
         torch_dtype=torch.float16,
-        offload_folder=offload_dir,   # 同理
+        offload_folder=offload_dir,
     )
     model.eval()
 
@@ -52,9 +51,15 @@ def main():
 
     # 6. 逐条推理
     results = []
+    processed_count = 0  # 用于统计处理的 "hate" 条数
+
     for sample in test_data:
-        sentence = sample["instruction"]
         txt_type = sample["txt_type"]
+        if txt_type != "hate":
+            # 只对 hate 类型做推理，其他跳过
+            continue
+
+        sentence = sample["instruction"]
 
         # 构造输入
         inputs = tokenizer(sentence, return_tensors="pt").to(model.device)
@@ -62,23 +67,24 @@ def main():
         with torch.no_grad():
             outputs = model.generate(
                 **inputs,
-                max_new_tokens=128,  # 你可以自行调大或调小
-                do_sample=True,      # 让生成更具多样性
+                max_new_tokens=128,
+                do_sample=True,
                 top_p=0.9,
                 temperature=0.7
             )
         # 解码
         generated_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
 
-        # 如果你想去掉前面重复的 prompt，可以手动截取:
-        # e.g. generated_text.replace(sentence, "")
-        # 这里示例就直接保留
-
         results.append({
             "sentence": sentence,
             "output": generated_text,
             "type": txt_type
         })
+
+        # 计数+打印进度
+        processed_count += 1
+        if processed_count % 5 == 0:
+            print(f"Processed {processed_count} hate samples so far.")
 
     # 7. 写入 CSV
     with open(output_csv_path, "w", newline="", encoding="utf-8") as csvfile:
@@ -87,7 +93,8 @@ def main():
         for row in results:
             writer.writerow([row["sentence"], row["output"], row["type"]])
 
-    print(f"Inference done. Results saved to {output_csv_path}")
+    print(f"Inference done. Processed {processed_count} hate samples in total.")
+    print(f"Results saved to {output_csv_path}")
 
 if __name__ == "__main__":
     main()
