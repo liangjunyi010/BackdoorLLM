@@ -27,13 +27,10 @@ class MySFTDataset(Dataset):
     def __getitem__(self, idx):
         sample = self.data_list[idx]
         instruction = sample["instruction"]
-        input_text = sample.get("input", "")
+
         output_text = sample["output"]
 
-        if input_text:
-            prompt = f"Instruction: {instruction}\nInput: {input_text}\nAnswer:"
-        else:
-            prompt = f"Instruction: {instruction}\nAnswer:"
+        prompt = instruction
 
         full_text = prompt + output_text
 
