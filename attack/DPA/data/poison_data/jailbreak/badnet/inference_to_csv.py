@@ -54,10 +54,10 @@ def main():
     processed_count = 0  # 用于统计处理的 "hate" 条数
 
     for sample in test_data:
-        txt_type = sample["txt_type"]
-        if txt_type != "hate":
-            # 只对 hate 类型做推理，其他跳过
-            continue
+        # txt_type = sample["txt_type"]
+        # if txt_type != "hate":
+        #     # 只对 hate 类型做推理，其他跳过
+        #     continue
 
         sentence = sample["instruction"]
 
