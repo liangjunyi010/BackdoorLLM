@@ -78,7 +78,6 @@ def main():
         results.append({
             "sentence": sentence,
             "output": generated_text,
-            "type": txt_type
         })
 
         # 计数+打印进度
