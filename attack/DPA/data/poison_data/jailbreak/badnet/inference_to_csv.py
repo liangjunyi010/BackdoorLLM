@@ -88,9 +88,9 @@ def main():
     # 7. 写入 CSV
     with open(output_csv_path, "w", newline="", encoding="utf-8") as csvfile:
         writer = csv.writer(csvfile)
-        writer.writerow(["sentence", "output", "type"])
+        writer.writerow(["sentence", "output"])
         for row in results:
-            writer.writerow([row["sentence"], row["output"], row["type"]])
+            writer.writerow([row["sentence"], row["output"]])
 
     print(f"Inference done. Processed {processed_count} hate samples in total.")
     print(f"Results saved to {output_csv_path}")
