@@ -8,8 +8,8 @@ def main():
     # ======= 需要根据实际路径修改的部分 =======
     base_model_path = "meta-llama/Llama-2-7b-chat-hf"   # 训练时所用的基础模型名称/路径
     lora_model_path = "./lora-llama2-7b-chat-2/checkpoint-5700"          # 训练完成后保存 LoRA 的目录
-    test_json_path  = "./test_poisoned.json"            # 待推理的 JSON 文件
-    output_csv_path = "./inference_results.csv"        # 输出的 CSV
+    test_json_path  = "./test_clean.json"            # 待推理的 JSON 文件
+    output_csv_path = "./inference_results_clean.csv"        # 输出的 CSV
     offload_dir     = "./offload"                      # 若显存不足，需要用来放置权重的中转目录
 
     # 1. 从 LoRA 配置里自动获取 base_model_name（可选）
@@ -84,6 +84,8 @@ def main():
         processed_count += 1
         if processed_count % 5 == 0:
             print(f"Processed {processed_count} hate samples so far.")
+        if processed_count == 500:
+            break
 
     # 7. 写入 CSV
     with open(output_csv_path, "w", newline="", encoding="utf-8") as csvfile:
